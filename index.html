@@ -5,6 +5,16 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>EcoPoint Medellín</title>
 <meta name="theme-color" content="#2F5D3F">
+<meta name="description" content="Encuentra puntos verdes en Medellín, aprende a reciclar y gana puntos. Sin registrarte.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="EcoPoint">
+<meta property="og:title" content="EcoPoint Medellín">
+<meta property="og:description" content="Encuentra dónde reciclar en Medellín, aprende a separar y gana puntos.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Figtree:wght@400;500;600;700&family=Caveat:wght@600&display=swap">
 <style>
@@ -75,6 +85,10 @@ main{flex:1;padding:18px max(16px,env(safe-area-inset-right,0px)) calc(100px + e
 .tile.wa span{color:#F0E3CF}
 .note{font-family:var(--f-note);font-size:23px;line-height:1.15;background:#EFE2C2;color:#3B2A1A;padding:14px 16px;border-radius:4px;transform:rotate(-1.2deg);box-shadow:var(--shadow);position:relative}
 .note small{display:block;font-family:var(--f-body);font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#7A5236;margin-bottom:2px}
+.install{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px dashed var(--brown-2);border-radius:16px;padding:12px 14px;text-align:left;width:100%;color:var(--ink)}
+.install .ic{flex:none;width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:var(--sand);color:var(--green)}
+.install b{display:block}
+.install span{font-size:13px;color:var(--muted)}
 
 /* Map */
 .mapcard{background:var(--surface);border:1px solid var(--line);border-radius:20px;overflow:hidden;box-shadow:var(--shadow)}
@@ -463,10 +477,31 @@ function home(){
     <button class="tile" data-go="cats"><span class="ic">${ICON.bins}</span><b>Categorías</b><span>Qué va en cada caneca, con fotos</span></button>
     <button class="tile wa" data-go="bot"><span class="ic">${ICON.wa}</span><div style="display:flex;flex-direction:column;gap:2px"><b>Pregúntale a EcoBot</b><span>Resuelve tus dudas por WhatsApp</span></div></button>
   </div>
+  ${installCard()}
   <div class="note"><small>Tip del día</small>${esc(tip)}</div>
   <p class="lead" style="margin:0">Llevas <b style="color:var(--green)">${S.points} ${S.points===1?"punto":"puntos"}</b> · Nivel ${lv}. Visita un punto verde, tómale una foto y gana 1 punto.</p>`;
 }
-after.home=()=>document.querySelectorAll("#main [data-go]").forEach(b=>b.onclick=()=>go(b.dataset.go));
+after.home=()=>{
+  document.querySelectorAll("#main [data-go]").forEach(b=>b.onclick=()=>go(b.dataset.go));
+  const ib=$("#installBtn"); if(ib) ib.onclick=install;
+};
+
+/* ============ INSTALAR EN EL CELULAR ============ */
+/* Android/Chrome ofrece el botón "Instalar"; en iPhone se explica cómo agregarla a la pantalla de inicio. */
+let installPrompt=null;
+const isWeb=location.protocol==="https:"||location.hostname==="localhost";
+const isInstalled=()=>matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
+const isIOS=()=>/iphone|ipad|ipod/i.test(navigator.userAgent);
+window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();installPrompt=e;if(route==="home")render();});
+window.addEventListener("appinstalled",()=>{installPrompt=null;toast("¡EcoPoint quedó instalada!");if(route==="home")render();});
+function installCard(){
+  if(isInstalled()||!isWeb||!(installPrompt||isIOS())) return "";
+  return `<button class="install" id="installBtn"><span class="ic"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M12 7v7M9 11l3 3 3-3"/></svg></span><div><b>Instala EcoPoint en tu celular</b><span>Ábrela como una app, sin descargar nada de la tienda</span></div></button>`;
+}
+async function install(){
+  if(installPrompt){ installPrompt.prompt(); await installPrompt.userChoice; installPrompt=null; render(); return; }
+  toast("En Safari toca Compartir (el cuadro con la flecha) y luego «Agregar a inicio»");
+}
 
 /* ============ MAPA / GPS ============ */
 const B={n:6.305,s:6.165,w:-75.640,e:-75.535}, MW=340, MH=440;
@@ -727,6 +762,11 @@ after.me=()=>{
 };
 
 render();
+
+/* App instalable: guarda la app en el celular (solo cuando está publicada en internet, no al abrir el archivo). */
+if("serviceWorker" in navigator && isWeb){
+  window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+}
 </script>
 </body>
 </html>
