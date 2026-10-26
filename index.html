@@ -209,6 +209,18 @@ select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(-
 .qs{display:flex;flex-direction:column;gap:8px}
 .q{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:13px 14px;text-decoration:none;font-weight:600}
 .q svg{width:18px;height:18px;color:var(--brown);flex:none}
+.chat.live{height:max(220px,calc(100vh - 425px));height:max(220px,calc(100dvh - 425px));overflow-y:auto;overscroll-behavior:contain;scroll-behavior:smooth}
+.chat .acts{display:flex;flex-wrap:wrap;gap:6px;margin:-2px 0 4px}
+.chip.act{background:var(--surface);border:1px solid var(--green-2);color:var(--green);font-weight:600;padding:7px 12px;cursor:pointer}
+.chip.act:active{background:var(--sand)}
+.bub.typing{display:flex;gap:4px;padding:12px 14px}
+.bub.typing i{width:7px;height:7px;border-radius:50%;background:var(--muted);animation:blink 1s infinite}
+.bub.typing i:nth-child(2){animation-delay:.15s}.bub.typing i:nth-child(3){animation-delay:.3s}
+@keyframes blink{0%,80%,100%{opacity:.25}40%{opacity:1}}
+.chatform{margin-top:-8px;display:flex;gap:8px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:5px 5px 5px 16px;box-shadow:var(--shadow);z-index:5}
+.chatform input{flex:1;min-width:0;border:0;background:none;font:inherit;color:var(--ink);font-size:16px;padding:9px 0}
+.chatform input:focus{outline:none}
+.chatform .send{flex:none;width:42px;height:42px;border-radius:50%;border:0;background:var(--green);color:var(--on-green);display:grid;place-items:center}
 .numbox{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:14px;color:var(--muted)}
 .numbox code{font-size:15px;color:var(--ink);background:var(--sand);padding:3px 8px;border-radius:8px}
 
@@ -271,7 +283,8 @@ nav.tabs button[aria-current="page"] svg{background:var(--sand);border-radius:10
 
 <script>
 /* ============ CONFIGURACIÓN ============ */
-/* Número de WhatsApp del EcoBot: código de país + número, sin + ni espacios. CAMBIAR por el número real. */
+/* Número de WhatsApp para "Hablar con una persona" en EcoBot: código de país + número, sin + ni espacios.
+   Mientras sea 573000000000 el botón no aparece. */
 const WHATSAPP_NUMBER = "573000000000";
 
 const IMG = {
@@ -448,7 +461,7 @@ function back(){ const r=history.pop()||"home"; go(r,false); }
 $("#backBtn").onclick=back;
 $("#brandBtn").onclick=()=>{history=[];go("home",false)};
 $("#pointsPill").onclick=()=>go("me");
-document.querySelectorAll("nav.tabs button").forEach(b=>b.onclick=()=>{history=[];go(b.dataset.go,false)});
+document.querySelectorAll("nav.tabs button").forEach(b=>b.onclick=()=>{history=[];openCat=null;go(b.dataset.go,false)});
 
 function render(){
   $("#pointsN").textContent=S.points;
@@ -475,7 +488,7 @@ function home(){
   <div class="tiles">
     <button class="tile" data-go="learn"><span class="ic">${ICON.book}</span><b>Cómo reciclo</b><span>Videos cortos para separar bien</span></button>
     <button class="tile" data-go="cats"><span class="ic">${ICON.bins}</span><b>Categorías</b><span>Qué va en cada caneca, con fotos</span></button>
-    <button class="tile wa" data-go="bot"><span class="ic">${ICON.wa}</span><div style="display:flex;flex-direction:column;gap:2px"><b>Pregúntale a EcoBot</b><span>Resuelve tus dudas por WhatsApp</span></div></button>
+    <button class="tile wa" data-go="bot"><span class="ic">${ICON.wa}</span><div style="display:flex;flex-direction:column;gap:2px"><b>Pregúntale a EcoBot</b><span>Resuelve tus dudas al instante</span></div></button>
   </div>
   ${installCard()}
   <div class="note"><small>Tip del día</small>${esc(tip)}</div>
@@ -720,21 +733,125 @@ after.cats=()=>{
   };
 };
 
-/* ============ ECOBOT (WhatsApp) ============ */
+/* ============ ECOBOT (chat dentro de la app, responde con el contenido de EcoPoint) ============ */
 function bot(){
-  const qs=["¿Qué va en la caneca blanca?","¿La caja de pizza se recicla?","¿Qué hago con las pilas?","¿Dónde llevo el aceite de cocina usado?","¿Cómo gano puntos en EcoPoint?"];
+  if(!chatLog.length) chatLog.push(botWelcome());
   return `
-  <div><p class="eyebrow">EcoBot</p><h1 class="title">Pregunta lo que quieras sobre reciclaje</h1><p class="lead">EcoBot te responde por WhatsApp, a cualquier hora.</p></div>
-  <div class="chat" aria-label="Ejemplo de conversación">
-    <p class="lbl">Ejemplo de conversación</p>
-    <div class="bub me">Hola, ¿el icopor se recicla?</div>
-    <div class="bub bot">¡Hola! Si está limpio, sí: va en la caneca blanca. Si tiene restos de comida, va en la negra.</div>
-    <div class="bub me">¿Y las pilas?</div>
-    <div class="bub bot">Las pilas nunca van a la basura. Llévalas a un Punto Naranja. ¿Te muestro el más cercano?</div>
-  </div>
-  <a class="btn brown block" href="${waUrl("Hola EcoBot, tengo una pregunta sobre reciclaje.")}" target="_blank" rel="noopener">${ICON.wa} Abrir chat en WhatsApp</a>
-  <div><p class="eyebrow" style="margin:0 0 8px">Preguntas rápidas</p><div class="qs">${qs.map(q=>`<a class="q" href="${waUrl(q)}" target="_blank" rel="noopener">${esc(q)}${ICON.arrow}</a>`).join("")}</div></div>
-  <div class="numbox">Número de EcoBot: <code>+${WHATSAPP_NUMBER}</code></div>`;
+  <div><p class="eyebrow">EcoBot</p><h1 class="title">Pregúntame sobre reciclaje</h1><p class="lead">Te respondo al instante, sin registrarte y aunque no tengas internet.</p></div>
+  <div class="chat live" id="chatLog" aria-live="polite">${chatLog.map(chatMsg).join("")}</div>
+  <form class="chatform" id="chatForm" autocomplete="off">
+    <input id="chatIn" type="text" placeholder="Ej: ¿el icopor se recicla?" aria-label="Escribe tu pregunta" maxlength="160" enterkeyhint="send">
+    <button class="send" aria-label="Enviar"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l16-8-6 16-2.5-6.5z"/></svg></button>
+  </form>
+  ${WA_READY?`<a class="btn ghost block" href="${waUrl("Hola, tengo una pregunta sobre reciclaje.")}" target="_blank" rel="noopener">${ICON.wa} Hablar con una persona por WhatsApp</a>`:""}`;
+}
+after.bot=()=>{
+  const log=$("#chatLog"); log.scrollTop=log.scrollHeight;
+  $("#chatForm").onsubmit=e=>{e.preventDefault();const i=$("#chatIn");const t=i.value.trim();if(!t)return;i.value="";ask(t);};
+  log.onclick=e=>{const b=e.target.closest("[data-act]");if(b)botAction(b.dataset.act,b.textContent.trim());};
+};
+
+/* Cada mensaje: {from:"me"|"bot", text, acts:[[etiqueta, acción]]}. Acciones: ask:texto, cat:id, point:id, map, locate, learn, me */
+const chatLog=[];
+const WA_READY = WHATSAPP_NUMBER!=="573000000000";
+const MENU=[["¿Esto se recicla?","ask:¿Esto se recicla?"],["Punto verde más cercano","ask:¿Dónde está el punto verde más cercano?"],["¿Qué va en cada caneca?","ask:¿Qué va en cada caneca?"],["Pilas, aceite o aparatos","ask:¿Qué hago con pilas, aceite o aparatos?"],["¿Cómo gano puntos?","ask:¿Cómo gano puntos en EcoPoint?"]];
+function botWelcome(){return {from:"bot",text:"¡Hola! Soy EcoBot 🌱 Te ayudo a reciclar en Medellín. Escríbeme lo que quieras botar, por ejemplo «caja de pizza» o «pilas», o elige una opción:",acts:MENU};}
+function chatMsg(m){
+  const acts=m.acts&&m.acts.length?`<div class="acts">${m.acts.map(a=>`<button type="button" class="chip act" data-act="${esc(a[1])}">${esc(a[0])}</button>`).join("")}</div>`:"";
+  return `<div class="bub ${m.from}">${esc(m.text).replace(/\n/g,"<br>")}</div>${acts}`;
+}
+function pushBot(m){
+  const log=$("#chatLog"); chatLog.push(m);
+  if(!log) return;
+  const typing=document.createElement("div"); typing.className="bub bot typing"; typing.innerHTML="<i></i><i></i><i></i>"; typing.setAttribute("aria-label","EcoBot está escribiendo");
+  log.appendChild(typing); log.scrollTop=log.scrollHeight;
+  setTimeout(()=>{ typing.remove(); log.insertAdjacentHTML("beforeend",chatMsg(m)); log.scrollTop=log.scrollHeight; },450);
+}
+function ask(t){
+  chatLog.push({from:"me",text:t});
+  const log=$("#chatLog"); if(log){log.insertAdjacentHTML("beforeend",chatMsg({from:"me",text:t}));log.scrollTop=log.scrollHeight;}
+  pushBot(answer(t));
+}
+function botAction(a,label){
+  const [k,...rest]=a.split(":"), v=rest.join(":");
+  if(k==="ask") return ask(v);
+  if(k==="cat"){ openCat=v; history.push(route); route="cats"; render(); window.scrollTo(0,0); return; }
+  if(k==="point"){ go("map"); openPoint(v); return; }
+  if(k==="map") return go("map");
+  if(k==="learn") return go("learn");
+  if(k==="me") return go("me");
+  if(k==="locate"){
+    chatLog.push({from:"me",text:label}); $("#chatLog").insertAdjacentHTML("beforeend",chatMsg({from:"me",text:label}));
+    if(!("geolocation" in navigator)) return pushBot({from:"bot",text:"Tu celular no me deja usar el GPS. Elige tu barrio:",acts:barrioActs()});
+    navigator.geolocation.getCurrentPosition(pos=>{ here={lat:pos.coords.latitude,lng:pos.coords.longitude,label:"tu ubicación"}; pushBot(nearestMsg()); },
+      ()=>pushBot({from:"bot",text:"No pude usar tu ubicación (revisa el permiso). Elige tu barrio:",acts:barrioActs()}),
+      {enableHighAccuracy:true,timeout:9000,maximumAge:60000});
+    return;
+  }
+  if(k==="barrio"){ const b=BARRIOS[+v]; here={lat:b[1],lng:b[2],label:b[0]}; chatLog.push({from:"me",text:b[0]}); $("#chatLog").insertAdjacentHTML("beforeend",chatMsg({from:"me",text:b[0]})); pushBot(nearestMsg()); }
+}
+const barrioActs=()=>BARRIOS.map((b,i)=>[b[0],"barrio:"+i]);
+function nearestMsg(special){
+  let list=sortedPoints(); if(special) list=list.filter(p=>p.takes.some(t=>/pilas|aceite|bombillo|celular|electr/i.test(t)));
+  const p=list[0];
+  return {from:"bot",text:`El más cercano a ${here.label} es ${p.name} (${p.zone}), a ${fmtKm(p.d)}.\nRecibe: ${p.takes.join(", ").toLowerCase()}.\n\nCuando llegues, tómale una foto desde la app y ganas 1 punto.`,
+    acts:[["Ver el punto","point:"+p.id],["Ver todos en el mapa","map"]]};
+}
+
+/* ---- Cómo entiende EcoBot: palabras clave (sin tildes) → respuesta ---- */
+const BIN_TXT={blanca:"la caneca blanca (aprovechables limpios y secos)",verde:"la caneca verde (orgánicos)",negra:"la caneca negra (no aprovechables)"};
+const FAQ=[
+ {k:["hola","buenas","buenos dias","buenas tardes","hey","menu","ayuda","inicio"],a:()=>botWelcome()},
+ {k:["gracias","listo","perfecto","chevere","bacano"],a:()=>({from:"bot",text:"¡Con gusto! 🌱 Cada cosa que separas bien cuenta. ¿Algo más?",acts:MENU.slice(0,3)})},
+ {k:["esto se recicla"],a:()=>({from:"bot",text:"Escríbeme qué quieres botar, por ejemplo «botella de vidrio», «servilleta» o «caja de leche», y te digo en qué caneca va.",acts:[["Caja de pizza","ask:caja de pizza"],["Icopor","ask:icopor"],["Tetrapak","ask:tetrapak"]]})},
+ {k:["cada caneca","canecas","colores","codigo de colores"],a:()=>({from:"bot",text:"En Colombia se separa en 3 canecas:\n⚪ Blanca: plástico, vidrio, metal, papel y cartón, limpios y secos.\n🟢 Verde: restos de comida, cáscaras, cuncho de café y hojas.\n⚫ Negra: papel higiénico, servilletas, pañales y papeles o cartones con comida o grasa.",acts:[["Ver categorías con fotos","cat:plastico"]]})},
+ {k:["caneca blanca","bolsa blanca"],a:()=>({from:"bot",text:"⚪ Caneca blanca: plástico, vidrio, metal, papel y cartón, limpios y secos.",acts:[["Plástico","cat:plastico"],["Cartón y papel","cat:carton"],["Vidrio","cat:vidrio"],["Metal","cat:metal"]]})},
+ {k:["caneca verde","bolsa verde"],a:()=>({from:"bot",text:"🟢 Caneca verde: restos de comida, cáscaras de frutas y verduras, cuncho de café y hojas. Sirve para hacer compost.",acts:[["Ver orgánicos","cat:organico"]]})},
+ {k:["caneca negra","bolsa negra"],a:()=>({from:"bot",text:"⚫ Caneca negra: papel higiénico, servilletas, pañales y papeles o cartones con comida o grasa.",acts:[["Ver no aprovechables","cat:negra"]]})},
+ {k:["pilas aceite o aparatos","residuos especiales","que es un punto naranja"],a:()=>({from:"bot",text:"Pilas, aceite de cocina, bombillos, celulares, cargadores y computadores nunca van a la basura. Llévalos a un Punto Naranja de Emvarias. Los medicamentos vencidos van a un Punto Azul, en farmacias y droguerías.",acts:[["Punto Naranja más cercano","ask:punto naranja cercano"],["Ver residuos especiales","cat:especial"]]})},
+ {k:["pizza"],a:()=>({from:"bot",text:"Si la caja de pizza está limpia, sí se recicla: caneca blanca. Si tiene grasa, va a la negra. Puedes cortar la parte limpia y reciclarla ✂️",acts:[["Ver cartón y papel","cat:carton"]]})},
+ {k:["icopor","icopo","poliestireno"],a:()=>({from:"bot",text:"Icopor limpio: sí, caneca blanca. Con restos de comida: caneca negra.",acts:[["Ver plástico","cat:plastico"]]})},
+ {k:["pila","bateria"],a:()=>({from:"bot",text:"Las pilas nunca van a la basura 🔋 Llévalas a un Punto Naranja de Emvarias.",acts:[["Punto Naranja más cercano","ask:punto naranja cercano"]]})},
+ {k:["aceite"],a:()=>({from:"bot",text:"Deja enfriar el aceite, guárdalo en una botella plástica cerrada y llévalo a un Punto Naranja. Nunca lo eches por el lavaplatos: un litro contamina miles de litros de agua.",acts:[["Punto Naranja más cercano","ask:punto naranja cercano"]]})},
+ {k:["celular","cargador","computador","televisor","electronic","aparato","bombillo"],a:()=>({from:"bot",text:"Celulares, cargadores, computadores, bombillos y otros aparatos van a un Punto Naranja: allí recuperan sus materiales.",acts:[["Punto Naranja más cercano","ask:punto naranja cercano"],["Ver residuos especiales","cat:especial"]]})},
+ {k:["medicamento","remedio","pastilla","jeringa"],a:()=>({from:"bot",text:"Los medicamentos vencidos van a un Punto Azul 💊, que está en farmacias y droguerías. No los botes a la basura ni por el sanitario."})},
+ {k:["lavar","enjuag"],a:()=>({from:"bot",text:"Sí: dale un enjuague rápido a los envases y déjalos secar. Así no contaminan el resto del reciclaje 💧"})},
+ {k:["gano puntos","ganar puntos","mis puntos","nivel","puntos en ecopoint","como gano"],a:()=>({from:"bot",text:`Abre el mapa, ve a un punto verde y, cuando llegues, toma una foto del lugar desde la app: ganas 1 punto por visita (uno por punto cada día). También ganas 1 punto por cada video de «Cómo reciclo» que veas completo.\n\nHoy llevas ${S.points} ${S.points===1?"punto":"puntos"}.`,acts:[["Abrir el mapa","map"],["Ver videos","learn"],["Mis puntos","me"]]})},
+ {k:["registr","cuenta","login","contrasena","usuario"],a:()=>({from:"bot",text:"No necesitas registrarte. EcoPoint funciona sin cuenta y tus puntos se guardan en tu celular."})},
+ {k:["video","aprender","como reciclo","como reciclar"],a:()=>({from:"bot",text:"En «Cómo reciclo» hay 4 videos cortos de 25 segundos. Cada uno que veas completo te da 1 punto.",acts:[["Ver videos","learn"]]})},
+ {k:["cerca","punto verde","punto naranja","mapa","gps","ubicacion"],a:t=>whereMsg(t)}
+];
+/* Si la pregunta dice "dónde" pero no es un residuo conocido, también se entiende como "¿dónde reciclo?" */
+const WHERE_WEAK=["donde","llevar","llevo","reciclo"];
+function whereMsg(t){
+  const special=/naranja|pila|aceite|celular|bombillo/.test(t);
+  if(here) return nearestMsg(special);
+  return {from:"bot",text:"¡Te ayudo a encontrarlo! ¿Uso tu ubicación o prefieres elegir tu barrio?",acts:[["📍 Usar mi ubicación","locate"],...barrioActs(),["Ver mapa","map"]]};
+}
+function botNorm(s){return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[¿?¡!.,;:()"]/g," ").replace(/\s+/g," ").trim();}
+/* Busca el residuo en la lista de la app (ITEMS y lo que acepta cada categoría) */
+function findItem(t){
+  const stem=w=>w.replace(/(es|s)$/,"");
+  const words=t.split(" ").filter(w=>w.length>2&&!["que","con","los","las","del","una","uno","para","esto","esta","este","donde","como","boto","bota","echo","recicla","reciclar","reciclo","va","caneca","puedo","se"].includes(w)).map(stem);
+  if(!words.length) return null;
+  let best=null,score=0;
+  const consider=(name,cat)=>{const n=botNorm(name).split(" ").map(stem);const s=words.filter(w=>n.some(x=>x.startsWith(w)||w.startsWith(x))).length/Math.max(words.length,1)+(words.filter(w=>n.includes(w)).length*.01);if(s>score){score=s;best={name,cat};}};
+  ITEMS.forEach(i=>consider(i[0],i[1]));
+  CATS.forEach(c=>{consider(c.name,c.id);c.yes.forEach(y=>consider(y,c.id));});
+  return score>=.5?best:null;
+}
+function answer(raw){
+  const t=botNorm(raw);
+  for(const f of FAQ) if(f.k.some(k=>t.includes(botNorm(k))) && !(f.k.includes("hola")&&t.split(" ").length>3)) return f.a(t);
+  const hit=findItem(t);
+  if(hit){
+    if(hit.cat==="farmacia") return FAQ.find(f=>f.k.includes("medicamento")).a(t);
+    const c=CATS.find(x=>x.id===hit.cat);
+    if(c.bin==="naranja") return {from:"bot",text:`${hit.name}: nunca a la basura. Llévalo a un Punto Naranja de Emvarias.`,acts:[["Punto Naranja más cercano","ask:punto naranja cercano"],["Ver residuos especiales","cat:especial"]]};
+    return {from:"bot",text:`${hit.name}: va en ${BIN_TXT[c.bin]}.`+(c.bin==="negra"?"":`\n💡 ${c.tip}`),acts:[["Ver "+c.name.toLowerCase(),"cat:"+c.id],["Otra pregunta","ask:¿Esto se recicla?"]]};
+  }
+  if(WHERE_WEAK.some(k=>t.includes(k))) return whereMsg(t);
+  return {from:"bot",text:"Mmm, eso no lo tengo claro todavía 🤔 Prueba escribiéndolo de otra forma (por ejemplo «botella de vidrio») o elige una opción:",acts:MENU.slice(0,4)};
 }
 
 /* ============ MIS PUNTOS ============ */
