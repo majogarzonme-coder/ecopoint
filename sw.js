@@ -1,6 +1,6 @@
 /* Guarda la app en el celular para que abra rápido y funcione sin internet.
    Al publicar una versión nueva, cambia VERSION para que los celulares la actualicen. */
-const VERSION = "ecopoint-v2";
+const VERSION = "ecopoint-v3";
 const APP = ["./", "./index.html", "./manifest.webmanifest", "./icons/icon-192.png", "./icons/icon-512.png", "./icons/apple-touch-icon.png"];
 
 self.addEventListener("install", e => {
@@ -19,7 +19,7 @@ self.addEventListener("fetch", e => {
   const url = new URL(req.url);
   // La app: primero la red (para recibir cambios), y si no hay internet, la copia guardada.
   if (req.mode === "navigate") {
-    e.respondWith(fetch(req).then(res => {
+    e.respondWith(fetch(req.url, { cache: "no-cache" }).then(res => {
       const copy = res.clone(); caches.open(VERSION).then(c => c.put("./index.html", copy)); return res;
     }).catch(() => caches.match("./index.html")));
     return;
