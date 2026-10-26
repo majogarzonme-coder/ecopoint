@@ -1,6 +1,6 @@
 /* Guarda la app en el celular para que abra rápido y funcione sin internet.
    Al publicar una versión nueva, cambia VERSION para que los celulares la actualicen. */
-const VERSION = "ecopoint-v3";
+const VERSION = "ecopoint-v4";
 const APP = ["./", "./index.html", "./manifest.webmanifest", "./icons/icon-192.png", "./icons/icon-512.png", "./icons/apple-touch-icon.png"];
 
 self.addEventListener("install", e => {
